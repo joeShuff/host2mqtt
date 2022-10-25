@@ -1,6 +1,6 @@
 # host2mqtt - Deliver system status information over MQTT.
 
-This program uses `psutil` to monitor your systems performance stats and report them to an MQTT server. 
+This program uses `psutil` to monitor your system's performance stats and report them to an MQTT server. 
 
 It can also publish Home Assistant MQTT Discovery messages so that binary sensors automatically show up in Home Assistant.
 
@@ -11,7 +11,7 @@ Run this container using docker compose:
 version: '3'
 services:
   host2mqtt:
-    container_name: docker2mqtt
+    container_name: host2mqtt
     image: denizenn/host2mqtt
     environment:
     - HOST2MQTT_HOSTNAME=my_host
@@ -81,7 +81,6 @@ Data is published to various topics of the style `{MQTT_TOPIC_PREFIX}/{HOSTNAME}
 
 # Home Assistant
 
-After you start the service, devices should show up in Home Assistant immediately.
-All the metadata, stats and controls for each container are entities in the device.
+After you start the service, a device should show up in Home Assistant immediately.
 
-![Screenshot of Home Assistant sensor showing status and attributes.](art/ha_screenshot.png)
+![Screenshot of Home Assistant sensor showing status and attributes.](art/ha_host2mqtt.png)
