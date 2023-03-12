@@ -223,6 +223,15 @@ def update_sensors():
     if hasattr(times, 'iowait'):
         cpu_attrs_json['cpu_usage_iowait'] = str(times.iowait)
 
+    if hasattr(times, 'nice'):
+        cpu_attrs_json['cpu_usage_nice'] = str(times.nice)
+
+    if hasattr(times, 'irq'):
+        cpu_attrs_json['cpu_usage_irq'] = str(times.irq)
+
+    if hasattr(times, 'softirq'):
+        cpu_attrs_json['cpu_usage_softirq'] = str(times.softirq)
+
     mqtt_send(topics['cpu_usage_attrs'], json.dumps(cpu_attrs_json))
 
     memory = psutil.virtual_memory()
