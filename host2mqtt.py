@@ -105,8 +105,6 @@ def mqtt_connect(exit_on_fail=False):
         mqtt.connect(MQTT_HOST, MQTT_PORT, MQTT_TIMEOUT)
         connected_to_mqtt = True
 
-        # mqtt.subscribe(topics['commands'].format("+"))
-
         mqtt.loop_start()
         mqtt_send(f'{MQTT_TOPIC_PREFIX}/{HOST2MQTT_HOSTNAME}/status', 'online', retain=True)
         return True
@@ -176,15 +174,16 @@ def format_disk_name(name):
         .replace("/", "_")\
         .replace(":", "")\
         .lower()\
-        .replace("__", "_")
+        .replace("__", "_")\
+        .strip("_")
 
 
 def register_device_disk(disk, diskname = "none"):
     disk_config = base_config | {
         "state_topic": topics['disk_usage'].format(diskname),
         "json_attributes_topic": topics['disk_usage_attrs'].format(diskname),
-        "name": f"{disk.device} Disk Usage",
-        "unique_id": f"{HOST2MQTT_HOSTNAME}_{diskname}.cpu_usage",
+        "name": f"{disk.mountpoint} Disk Usage",
+        "unique_id": f"{HOST2MQTT_HOSTNAME}_{diskname}.storage",
         "unit_of_measurement": "%",
         "entity_category": "diagnostic",
         "icon": "mdi:harddisk"
@@ -206,12 +205,25 @@ def update_sensors():
     mqtt_send(topics['memory_usage'], psutil.virtual_memory().percent)
 
     cpu_freq = psutil.cpu_freq()
-    mqtt_send(topics['cpu_usage_attrs'], json.dumps({
+    cpu_attrs_json = {
         "cpu_count": psutil.cpu_count(),
         "cpu_freq_min": cpu_freq.min,
         "cpu_freq_max": cpu_freq.max,
         "cpu_freq_current": cpu_freq.current
-    }))
+    }
+
+    times = psutil.cpu_times_percent()
+
+    if hasattr(times, 'system'):
+        cpu_attrs_json['cpu_usage_system'] = str(times.system)
+
+    if hasattr(times, 'user'):
+        cpu_attrs_json['cpu_usage_user'] = str(times.user)
+
+    if hasattr(times, 'iowait'):
+        cpu_attrs_json['cpu_usage_iowait'] = str(times.iowait)
+
+    mqtt_send(topics['cpu_usage_attrs'], json.dumps(cpu_attrs_json))
 
     memory = psutil.virtual_memory()
     mqtt_send(topics['memory_usage_attrs'], json.dumps({
@@ -223,7 +235,7 @@ def update_sensors():
     parts = psutil.disk_partitions()
 
     for part in parts:
-        disk_name = format_disk_name(part.device)
+        disk_name = format_disk_name(part.mountpoint)
         register_device_disk(part, disk_name)
 
         disk_data = psutil.disk_usage(part.mountpoint)
@@ -247,5 +259,17 @@ if __name__ == '__main__':
     mqtt_connect(True)
 
     while True:
-        update_sensors()
-        sleep(STATS_DELAY_SECONDS)
+        try:
+            if not connected_to_mqtt:
+                log(tag="MQTT", message="MQTT not connected: Retrying...")
+
+                setup_mqtt()
+                if not mqtt_connect():
+                    sleep(10)
+                else:
+                    connected_to_mqtt = True
+            else:
+                update_sensors()
+                sleep(STATS_DELAY_SECONDS)
+        except Exception as e:
+            log(tag="Error", message=f"{e}")
