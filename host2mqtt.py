@@ -54,6 +54,8 @@ connected_to_mqtt = False
 '''
 MQTT CALLBACKS
 '''
+
+
 def on_mqtt_connect(client, userdata, flags, rc):
     global connected_to_mqtt
 
@@ -86,6 +88,8 @@ def on_mqtt_disconnect(client, userdata, rc):
 '''
 MQTT MANAGEMENT
 '''
+
+
 def setup_mqtt():
     global mqtt
 
@@ -169,16 +173,16 @@ def ha_register_host():
 
 
 def format_disk_name(name):
-    return name\
-        .replace("\\", "")\
-        .replace("/", "_")\
-        .replace(":", "")\
-        .lower()\
-        .replace("__", "_")\
+    return name \
+        .replace("\\", "") \
+        .replace("/", "_") \
+        .replace(":", "") \
+        .lower() \
+        .replace("__", "_") \
         .strip("_")
 
 
-def register_device_disk(disk, diskname = "none"):
+def register_device_disk(disk, diskname="none"):
     disk_config = base_config | {
         "state_topic": topics['disk_usage'].format(diskname),
         "json_attributes_topic": topics['disk_usage_attrs'].format(diskname),
@@ -201,6 +205,7 @@ def sizeof_humanreadable(num, suffix="B"):
 
 
 def update_sensors():
+    mqtt_send(f'{MQTT_TOPIC_PREFIX}/{HOST2MQTT_HOSTNAME}/status', 'online', retain=True)
     mqtt_send(topics['cpu_usage'], psutil.cpu_percent())
     mqtt_send(topics['memory_usage'], psutil.virtual_memory().percent)
 
@@ -270,7 +275,7 @@ if __name__ == '__main__':
     while True:
         try:
             if not connected_to_mqtt:
-                log(tag="MQTT", message="MQTT not connected: Retrying...")
+                print("MQTT not connected: Retrying...")
 
                 setup_mqtt()
                 if not mqtt_connect():
@@ -281,4 +286,4 @@ if __name__ == '__main__':
                 update_sensors()
                 sleep(STATS_DELAY_SECONDS)
         except Exception as e:
-            log(tag="Error", message=f"{e}")
+            print(f"{e}")
